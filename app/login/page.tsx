@@ -31,6 +31,7 @@ export default function Login() {
 
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   // Funzione per validare il token beta
   async function validateBetaToken() {
@@ -141,7 +142,7 @@ export default function Login() {
           // Altrimenti tentiamo login immediato (se conferma email non è obbligatoria)
           const { data: si, error: siErr } = await supabase.auth.signInWithPassword({ email, password });
           if (siErr || !si.session) {
-            setMsg("Registrazione riuscita. Controlla l'email per confermare l'account, poi accedi.");
+            setRegistrationSuccess(true);
             setLoading(false);
             return; // senza sessione non possiamo procedere
           }
@@ -267,7 +268,7 @@ export default function Login() {
 
       } else {
         // Questo ramo gestisce il caso di signup dove è richiesta conferma email
-        setMsg("Registrazione riuscita. Controlla l'email per confermare l'account, poi accedi.");
+        setRegistrationSuccess(true);
       }
 
     } catch (err: any) {
@@ -280,10 +281,44 @@ export default function Login() {
     }
   }
 
+  // Se registrazione riuscita, mostra solo il messaggio
+  if (registrationSuccess) {
+    return (
+      <div className="container" style={{ maxWidth: 440, paddingTop: 64, textAlign: "center" }}>
+        <div style={{ 
+          background: "#FEF3C7", 
+          border: "2px solid #F59E0B", 
+          borderRadius: 16, 
+          padding: 32,
+          marginTop: 48 
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+          <h2 style={{ color: "#92400E", fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
+            Registrazione riuscita!
+          </h2>
+          <p style={{ color: "#B45309", fontSize: 16, lineHeight: 1.6 }}>
+            Controlla l'email per confermare l'account, poi accedi.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn"
+          style={{ marginTop: 24 }}
+          onClick={() => {
+            setRegistrationSuccess(false);
+            setMode("signin");
+          }}
+        >
+          Vai al Login
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="container" style={{ maxWidth: 440, paddingTop: 64 }}>
       <h1 className="title">{mode === "signin" ? "Accedi" : "Registrati"}</h1>
-      <p className="helper">REPING Beta V2 - Per Utenti Tester - SU INVITO</p>
+      <p className="helper">REPING Beta V2 - Per Utenti Tester - SU INVITO o RICHIESTA</p>
 
       <form onSubmit={submit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
         {/* Token Beta - richiesto per la registrazione */}
@@ -520,6 +555,23 @@ export default function Login() {
 
         {msg && <p style={{ color: "#F59E0B" }}>{msg}</p>}
       </form>
+
+      {/* Link CoPilot */}
+      <div style={{ marginTop: 32, textAlign: "center" }}>
+        <a 
+          href="https://reping.it" 
+          target="_blank"
+          rel="noopener noreferrer"
+          className="helper"
+          style={{ 
+            textDecoration: "none",
+            color: "#9CA3AF",
+            fontSize: 13,
+          }}
+        >
+          REPING - CoPilot AI per agenti di commercio
+        </a>
+      </div>
     </div>
   );
 }

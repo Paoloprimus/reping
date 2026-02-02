@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { parse } from "csv-parse/browser/esm/sync";
 import readXlsxFile from "read-excel-file";
@@ -83,7 +83,17 @@ export default function OnboardingImport({ userName }: OnboardingImportProps) {
   const handleLoadFakeData = async () => {
     setLoadingFakeData(true);
     try {
-      const response = await fetch("/api/demo/seed", { method: "POST" });
+      // Ottieni userId dell'utente loggato
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Utente non autenticato");
+      }
+      
+      const response = await fetch("/api/demo/seed", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
       const result = await response.json();
       
       console.log("[OnboardingImport] Demo seed result:", result);

@@ -275,7 +275,25 @@ useEffect(() => {
 }, [authChecked, crypto, unlock, prewarm]);
 
   async function loadClients(): Promise<void> {
-    if (!crypto || !userId) return;
+    if (!userId) return;
+    
+    // 🆕 Se utente ha fatto skip o è in demo mode, carica solo dati in chiaro
+    const isDemoOrSkip = 
+      sessionStorage.getItem('reping:isAnonDemo') === 'true' ||
+      (() => {
+        try {
+          const onboardingData = localStorage.getItem('reping:onboarding_import_done');
+          if (onboardingData) {
+            const parsed = JSON.parse(onboardingData);
+            return parsed.skipped === true;
+          }
+        } catch {}
+        return false;
+      })();
+    
+    // Se non c'è crypto e non è demo/skip mode, non possiamo caricare
+    if (!crypto && !isDemoOrSkip) return;
+    
     setLoading(true);
 
 const { data, error } = await supabase
@@ -301,137 +319,158 @@ const { data, error } = await supabase
       return;
     }
 
-    // ✅ Forza creazione scope keys PRIMA di decifrare (con retry)
-    let scopeKeysReady = false;
-    for (let attempt = 0; attempt < 3 && !scopeKeysReady; attempt++) {
-      try {
-        console.log(`[/clients] 🔧 Creo scope keys... (tentativo ${attempt + 1}/3)`);
-        await (crypto as any).getOrCreateScopeKeys('table:accounts');
-        console.log('[/clients] ✅ Scope keys creati');
-        scopeKeysReady = true;
-      } catch (e) {
-        console.error('[/clients] ❌ Errore creazione scope keys:', e);
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 300));
-        }
-      }
-    }
-    
-    if (!scopeKeysReady) {
-      console.error('[/clients] ❌ CRITICO: Impossibile creare scope keys dopo 3 tentativi');
-    }
-
-    // DEBUG logs (opzionali, puoi rimuoverli dopo il test)
-    if (data && data.length > 0) {
-      const firstRecord = data[0] as any;
-      console.log('🔍 [DEBUG] Primo record RAW:', firstRecord.name_enc?.substring(0, 20) + '...');
-    }
-      
     const rowsAny = (data ?? []) as any[];
     const plain: PlainAccount[] = [];
 
-    for (const r0 of rowsAny) {
-      const r = r0 as RawAccount;
-      try {
-        const hasEncrypted =
-        !!(r.name_enc || r.email_enc || r.phone_enc || r.vat_number_enc || r.address_enc);
-
-        // 🔧 FIX: Converti hex-string in base64 (ORIGINALE - NON MODIFICATO!)
-        const hexToBase64 = (hexStr: any): string => {
-          if (!hexStr || typeof hexStr !== 'string') return '';
-          if (!hexStr.startsWith('\\x')) return hexStr;
-          
-          const hex = hexStr.slice(2);
-          const bytes = hex.match(/.{1,2}/g)?.map(b => String.fromCharCode(parseInt(b, 16))).join('') || '';
-          return bytes;
-        };
-        
-const recordForDecrypt = {
-  ...r,
-  name_enc: hexToBase64(r.name_enc),
-  name_iv: hexToBase64(r.name_iv),
-  contact_name_enc: hexToBase64(r.contact_name_enc),
-  contact_name_iv: hexToBase64(r.contact_name_iv),
-  email_enc: hexToBase64(r.email_enc),
-  email_iv: hexToBase64(r.email_iv),
-  phone_enc: hexToBase64(r.phone_enc),
-  phone_iv: hexToBase64(r.phone_iv),
-  vat_number_enc: hexToBase64(r.vat_number_enc),
-  vat_number_iv: hexToBase64(r.vat_number_iv),
-  address_enc: hexToBase64(r.address_enc),
-  address_iv: hexToBase64(r.address_iv),
-};
-
-        if (typeof (crypto as any)?.decryptFields !== "function") {
-          throw new Error("decryptFields non disponibile");
+    // 🆕 Se è demo/skip mode, usa solo dati in chiaro senza decifratura
+    if (isDemoOrSkip) {
+      console.log('[/clients] 🎮 Modo demo/skip - uso dati in chiaro');
+      for (const r0 of rowsAny) {
+        const r = r0 as RawAccount;
+        const customData = r.custom || {};
+        plain.push({
+          id: r.id,
+          created_at: r.created_at,
+          name: r.name || "",
+          contact_name: customData.contact_name || "",
+          city: r.city || "",
+          tipo_locale: r.tipo_locale || r.type || "",
+          email: customData.email || "",
+          phone: customData.phone || "",
+          vat_number: "",
+          notes: r.notes || r.note || "",
+        });
+      }
+    } else {
+      // ✅ Forza creazione scope keys PRIMA di decifrare (con retry)
+      let scopeKeysReady = false;
+      for (let attempt = 0; attempt < 3 && !scopeKeysReady; attempt++) {
+        try {
+          console.log(`[/clients] 🔧 Creo scope keys... (tentativo ${attempt + 1}/3)`);
+          await (crypto as any).getOrCreateScopeKeys('table:accounts');
+          console.log('[/clients] ✅ Scope keys creati');
+          scopeKeysReady = true;
+        } catch (e) {
+          console.error('[/clients] ❌ Errore creazione scope keys:', e);
+          if (attempt < 2) {
+            await new Promise(r => setTimeout(r, 300));
+          }
         }
-        
-        const toObj = (x: any): Record<string, unknown> =>
-          Array.isArray(x)
-            ? x.reduce((acc: Record<string, unknown>, it: any) => {
-                if (it && typeof it === "object" && "name" in it) acc[it.name] = it.value ?? "";
-                return acc;
-              }, {})
-            : ((x ?? {}) as Record<string, unknown>);
+      }
+      
+      if (!scopeKeysReady) {
+        console.error('[/clients] ❌ CRITICO: Impossibile creare scope keys dopo 3 tentativi');
+      }
 
-// ✅✅✅ FIX: Usa l'ID del record come Associated Data (firma)
-const decAny = await (crypto as any).decryptFields(
-  "table:accounts", 
-  "accounts", 
-  r.id, // <--- PUNTO CRITICO: Usa r.id invece di ''
-  recordForDecrypt,
-  ["name", "contact_name", "email", "phone", "vat_number", "address"]
-);
+      // DEBUG logs (opzionali, puoi rimuoverli dopo il test)
+      if (data && data.length > 0) {
+        const firstRecord = data[0] as any;
+        console.log('🔍 [DEBUG] Primo record RAW:', firstRecord.name_enc?.substring(0, 20) + '...');
+      }
 
-        const dec = toObj(decAny);
-        
-        // 🔧 FIX BUG #2: Log dettagliato se decifratura fallisce
-        if (!dec.name && r.name_enc) {
-          console.warn('[/clients] ⚠️ Decifratura nome fallita per', r.id, {
-            hasNameEnc: !!r.name_enc,
-            hasNameIv: !!r.name_iv,
-            decResult: dec,
+      for (const r0 of rowsAny) {
+        const r = r0 as RawAccount;
+        try {
+          const hasEncrypted =
+          !!(r.name_enc || r.email_enc || r.phone_enc || r.vat_number_enc || r.address_enc);
+
+          // 🔧 FIX: Converti hex-string in base64 (ORIGINALE - NON MODIFICATO!)
+          const hexToBase64 = (hexStr: any): string => {
+            if (!hexStr || typeof hexStr !== 'string') return '';
+            if (!hexStr.startsWith('\\x')) return hexStr;
+            
+            const hex = hexStr.slice(2);
+            const bytes = hex.match(/.{1,2}/g)?.map(b => String.fromCharCode(parseInt(b, 16))).join('') || '';
+            return bytes;
+          };
+          
+          const recordForDecrypt = {
+            ...r,
+            name_enc: hexToBase64(r.name_enc),
+            name_iv: hexToBase64(r.name_iv),
+            contact_name_enc: hexToBase64(r.contact_name_enc),
+            contact_name_iv: hexToBase64(r.contact_name_iv),
+            email_enc: hexToBase64(r.email_enc),
+            email_iv: hexToBase64(r.email_iv),
+            phone_enc: hexToBase64(r.phone_enc),
+            phone_iv: hexToBase64(r.phone_iv),
+            vat_number_enc: hexToBase64(r.vat_number_enc),
+            vat_number_iv: hexToBase64(r.vat_number_iv),
+            address_enc: hexToBase64(r.address_enc),
+            address_iv: hexToBase64(r.address_iv),
+          };
+
+          if (typeof (crypto as any)?.decryptFields !== "function") {
+            throw new Error("decryptFields non disponibile");
+          }
+          
+          const toObj = (x: any): Record<string, unknown> =>
+            Array.isArray(x)
+              ? x.reduce((acc: Record<string, unknown>, it: any) => {
+                  if (it && typeof it === "object" && "name" in it) acc[it.name] = it.value ?? "";
+                  return acc;
+                }, {})
+              : ((x ?? {}) as Record<string, unknown>);
+
+          // ✅✅✅ FIX: Usa l'ID del record come Associated Data (firma)
+          const decAny = await (crypto as any).decryptFields(
+            "table:accounts", 
+            "accounts", 
+            r.id, // <--- PUNTO CRITICO: Usa r.id invece di ''
+            recordForDecrypt,
+            ["name", "contact_name", "email", "phone", "vat_number", "address"]
+          );
+
+          const dec = toObj(decAny);
+          
+          // 🔧 FIX BUG #2: Log dettagliato se decifratura fallisce
+          if (!dec.name && r.name_enc) {
+            console.warn('[/clients] ⚠️ Decifratura nome fallita per', r.id, {
+              hasNameEnc: !!r.name_enc,
+              hasNameIv: !!r.name_iv,
+              decResult: dec,
+            });
+          }
+
+          // ✅ Estrai campi in chiaro (fallback per dati demo/non cifrati)
+          const notes = r.notes || r.note || "";
+          const city = r.city || "";
+          const tipoLocale = r.tipo_locale || r.type || "";
+          const plainName = r.name || "";  // nome in chiaro (per dati demo)
+          const plainStreet = r.street || "";
+
+          // 🔧 Usa nome in chiaro come fallback se decifratura non produce risultato
+          const finalName = String(dec.name || plainName || "");
+
+          plain.push({
+            id: r.id,
+            created_at: r.created_at,
+            name: finalName,  // usa fallback se decifratura fallisce
+            contact_name: String(dec.contact_name ?? ""),
+            city: String(city),
+            tipo_locale: String(tipoLocale),
+            email: String(dec.email ?? ""),
+            phone: String(dec.phone ?? ""),
+            vat_number: String(dec.vat_number ?? ""),
+            notes: String(notes),
+          });
+          
+        } catch (e) {
+          console.warn("[/clients] decrypt error for", r.id, e);
+          // 🔧 Usa campi in chiaro come fallback in caso di errore
+          plain.push({
+            id: r.id,
+            created_at: r.created_at,
+            name: r.name || "",  // fallback al nome in chiaro (per dati demo)
+            contact_name: "", 
+            city: r.city || "",
+            tipo_locale: r.tipo_locale || r.type || "",
+            email: "", 
+            phone: "", 
+            vat_number: "", 
+            notes: r.notes || r.note || "",
           });
         }
-
-        // ✅ Estrai campi in chiaro (fallback per dati demo/non cifrati)
-        const notes = r.notes || r.note || "";
-        const city = r.city || "";
-        const tipoLocale = r.tipo_locale || r.type || "";
-        const plainName = r.name || "";  // nome in chiaro (per dati demo)
-        const plainStreet = r.street || "";
-
-        // 🔧 Usa nome in chiaro come fallback se decifratura non produce risultato
-        const finalName = String(dec.name || plainName || "");
-
-plain.push({
-  id: r.id,
-  created_at: r.created_at,
-  name: finalName,  // usa fallback se decifratura fallisce
-  contact_name: String(dec.contact_name ?? ""),
-  city: String(city),
-  tipo_locale: String(tipoLocale),
-  email: String(dec.email ?? ""),
-  phone: String(dec.phone ?? ""),
-  vat_number: String(dec.vat_number ?? ""),
-  notes: String(notes),
-});
-        
-      } catch (e) {
-        console.warn("[/clients] decrypt error for", r.id, e);
-        // 🔧 Usa campi in chiaro come fallback in caso di errore
-plain.push({
-  id: r.id,
-  created_at: r.created_at,
-  name: r.name || "",  // fallback al nome in chiaro (per dati demo)
-  contact_name: "", 
-  city: r.city || "",
-  tipo_locale: r.tipo_locale || r.type || "",
-  email: "", 
-  phone: "", 
-  vat_number: "", 
-  notes: r.notes || r.note || "",
-});
       }
     }
 
@@ -442,6 +481,28 @@ plain.push({
 
   // carica dati appena la cifratura è sbloccata e c'è l'utente
 useEffect(() => {
+  // 🆕 Check se è demo o skip mode
+  const isDemoOrSkip = 
+    sessionStorage.getItem('reping:isAnonDemo') === 'true' ||
+    (() => {
+      try {
+        const onboardingData = localStorage.getItem('reping:onboarding_import_done');
+        if (onboardingData) {
+          const parsed = JSON.parse(onboardingData);
+          return parsed.skipped === true;
+        }
+      } catch {}
+      return false;
+    })();
+
+  // Se è demo/skip mode, carica subito senza aspettare crypto
+  if (isDemoOrSkip && userId && !loading) {
+    console.log('[/clients] 🎮 Demo/skip mode - carico subito');
+    setChecking(false);
+    loadClients();
+    return;
+  }
+
   if (actuallyReady) {
     // Appena ready, spegni subito checking
     setChecking(false);
@@ -710,9 +771,21 @@ async function saveEditing() {
   const isDemoMode = typeof window !== 'undefined' && 
     sessionStorage.getItem('reping:isAnonDemo') === 'true';
 
+  // 🆕 Check se utente ha fatto "skip" senza dati (faccio un giro)
+  const hasSkippedOnboarding = typeof window !== 'undefined' && (() => {
+    try {
+      const onboardingData = localStorage.getItem('reping:onboarding_import_done');
+      if (onboardingData) {
+        const parsed = JSON.parse(onboardingData);
+        return parsed.skipped === true;
+      }
+    } catch {}
+    return false;
+  })();
+
   // 🔧 FIX: Mostra loader durante auto-unlock, form SOLO se non c'è passphrase
-  // In demo mode, bypassa completamente il check crypto
-  if (!isDemoMode && (!actuallyReady || !crypto)) {
+  // In demo mode o skip mode, bypassa completamente il check crypto
+  if (!isDemoMode && !hasSkippedOnboarding && (!actuallyReady || !crypto)) {
     const hasPassInStorage = typeof window !== 'undefined' && 
       (sessionStorage.getItem('repping:pph') || localStorage.getItem('repping:pph'));
     
