@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useCrypto } from '@/lib/crypto/CryptoProvider';
 import { useDrawers, LeftDrawer, RightDrawer } from '@/components/Drawers';
@@ -44,10 +44,14 @@ type DialogState = {
 
 export default function QuickAddClientPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { crypto, ready } = useCrypto();
   
   // Drawer
   const { leftOpen, rightOpen, rightContent, openLeft, closeLeft, openDati, openDocs, openImpostazioni, closeRight } = useDrawers();
+  
+  // 🆕 Flag per avviare dialogo vocale automaticamente
+  const [autoVoiceTriggered, setAutoVoiceTriggered] = useState(false);
 
   // Logout
   async function logout() {
@@ -118,6 +122,21 @@ export default function QuickAddClientPage() {
   }, [crypto, ready]);
 
   const actuallyReady = ready || localReady;
+
+  // 🆕 Auto-avvia dialogo vocale se richiesto via URL param
+  useEffect(() => {
+    if (autoVoiceTriggered) return;
+    if (!actuallyReady) return;
+    
+    const voiceParam = searchParams.get('voice');
+    if (voiceParam === '1') {
+      setAutoVoiceTriggered(true);
+      // Piccolo delay per assicurarsi che il component sia montato
+      setTimeout(() => {
+        startDialog();
+      }, 500);
+    }
+  }, [actuallyReady, searchParams, autoVoiceTriggered]);
 
   // Dati del form
   const [form, setForm] = useState<ClientForm>({
@@ -693,9 +712,25 @@ export default function QuickAddClientPage() {
     }
   }, [dialogState]);
 
+  // 🆕 Check se utente ha fatto "skip" senza dati (faccio un giro)
+  const hasSkippedOnboarding = typeof window !== 'undefined' && (() => {
+    try {
+      const onboardingData = localStorage.getItem('reping:onboarding_import_done');
+      if (onboardingData) {
+        const parsed = JSON.parse(onboardingData);
+        return parsed.skipped === true;
+      }
+    } catch {}
+    return false;
+  })();
+
+  // 🎮 Check se è modalità demo
+  const isDemoMode = typeof window !== 'undefined' && 
+    sessionStorage.getItem('reping:isAnonDemo') === 'true';
+
   // 🔐 Blocco UI se crittografia non è pronta
-  // 🔧 FIX: Mostra sempre lo stesso loader per evitare hydration mismatch
-  if (!actuallyReady || !crypto) {
+  // 🔧 FIX: Bypass per demo/skip mode
+  if (!isDemoMode && !hasSkippedOnboarding && (!actuallyReady || !crypto)) {
     return (
       <div style={{ maxWidth: 600, margin: '80px auto', padding: 24, border: '1px solid #e5e7eb', borderRadius: 12 }}>
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12, color: '#111827' }}>

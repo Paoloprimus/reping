@@ -20,8 +20,8 @@ export default function NewClientModal({ show, onClose }: Props) {
 
   const handleVoice = () => {
     onClose();
-    // Emette evento per avviare creazione guidata
-    window.dispatchEvent(new CustomEvent('repping:startGuidedClientCreation'));
+    // Vai direttamente alla pagina quick-add con parametro per avviare voce
+    window.location.href = '/tools/quick-add-client?voice=1';
   };
 
   const handleForm = () => {

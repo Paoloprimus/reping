@@ -362,9 +362,21 @@ export default function VisitsPage(): JSX.Element {
   const isDemoMode = typeof window !== 'undefined' && 
     sessionStorage.getItem('reping:isAnonDemo') === 'true';
 
+  // 🆕 Check se utente ha fatto "skip" senza dati (faccio un giro)
+  const hasSkippedOnboarding = typeof window !== 'undefined' && (() => {
+    try {
+      const onboardingData = localStorage.getItem('reping:onboarding_import_done');
+      if (onboardingData) {
+        const parsed = JSON.parse(onboardingData);
+        return parsed.skipped === true;
+      }
+    } catch {}
+    return false;
+  })();
+
   // 🔧 FIX: Mostra loader durante auto-unlock, form SOLO se non c'è passphrase
-  // In demo mode, bypassa completamente il check crypto
-  if (!isDemoMode && (!actuallyReady || !crypto)) {
+  // In demo/skip mode, bypassa completamente il check crypto
+  if (!isDemoMode && !hasSkippedOnboarding && (!actuallyReady || !crypto)) {
     const hasPassInStorage = typeof window !== 'undefined' && 
       (sessionStorage.getItem('repping:pph') || localStorage.getItem('repping:pph'));
     
