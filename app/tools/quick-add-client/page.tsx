@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useCrypto } from '@/lib/crypto/CryptoProvider';
-import { useDrawers, LeftDrawer, RightDrawer } from '@/components/Drawers';
+import { useDrawers, DrawersWithBackdrop } from '@/components/Drawers';
 import TopBar from '@/components/home/TopBar';
 import { supabase } from '@/lib/supabase/client';
 import { geocodeAddress } from '@/lib/geocoding';
@@ -1106,11 +1106,14 @@ function QuickAddClientContent() {
         </div>
       </div>
 
-      {/* Drawer */}
-      <div style={{ position: "relative", zIndex: 2001 }}>
-        <LeftDrawer open={leftOpen} onClose={closeLeft} onSelect={() => {}} />
-        <RightDrawer open={rightOpen} content={rightContent} onClose={closeRight} />
-      </div>
+      {/* Drawer con backdrop */}
+      <DrawersWithBackdrop
+        leftOpen={leftOpen}
+        rightOpen={rightOpen}
+        rightContent={rightContent}
+        onCloseLeft={closeLeft}
+        onCloseRight={closeRight}
+      />
     </>
   );
 }

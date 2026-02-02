@@ -38,7 +38,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { parse } from "csv-parse/browser/esm/sync";
 import readXlsxFile from "read-excel-file";
-import { useDrawers, LeftDrawer, RightDrawer } from "@/components/Drawers";
+import { useDrawers, DrawersWithBackdrop } from "@/components/Drawers";
 import TopBar from "@/components/home/TopBar";
 import { supabase } from "@/lib/supabase/client";
 
@@ -403,9 +403,14 @@ export default function ImportProductsPage() {
         onLogout={logout}
       />
 
-      <LeftDrawer open={leftOpen} onClose={closeLeft} onSelect={() => {}} />
-
-      <RightDrawer open={rightOpen} content={rightContent} onClose={closeRight} />
+      {/* Drawer con backdrop */}
+      <DrawersWithBackdrop
+        leftOpen={leftOpen}
+        rightOpen={rightOpen}
+        rightContent={rightContent}
+        onCloseLeft={closeLeft}
+        onCloseRight={closeRight}
+      />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Progress Indicator */}

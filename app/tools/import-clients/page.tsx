@@ -36,7 +36,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { parse } from "csv-parse/browser/esm/sync";
 import readXlsxFile from "read-excel-file";
-import { useDrawers, LeftDrawer, RightDrawer } from "@/components/Drawers";
+import { useDrawers, DrawersWithBackdrop } from "@/components/Drawers";
 import TopBar from "@/components/home/TopBar";
 import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/Toast";
@@ -1349,11 +1349,14 @@ export default function ImportClientsPage() {
       </div>
     </div>
 
-    {/* Drawer */}
-    <div style={{ position: "relative", zIndex: 2001 }}>
-      <LeftDrawer open={leftOpen} onClose={closeLeft} onSelect={() => {}} />
-      <RightDrawer open={rightOpen} content={rightContent} onClose={closeRight} />
-    </div>
+    {/* Drawer con backdrop */}
+    <DrawersWithBackdrop
+      leftOpen={leftOpen}
+      rightOpen={rightOpen}
+      rightContent={rightContent}
+      onCloseLeft={closeLeft}
+      onCloseRight={closeRight}
+    />
 
     {/* 🆕 Popup conferma cancellazione dati demo */}
     {showDemoConfirm && (
