@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useCrypto } from '@/lib/crypto/CryptoProvider';
 import { useDrawers, LeftDrawer, RightDrawer } from '@/components/Drawers';
 import TopBar from '@/components/home/TopBar';
@@ -42,7 +42,7 @@ type DialogState = {
   awaitingConfirmation: boolean;
 };
 
-export default function QuickAddClientPage() {
+function QuickAddClientContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { crypto, ready } = useCrypto();
@@ -1112,5 +1112,14 @@ export default function QuickAddClientPage() {
         <RightDrawer open={rightOpen} content={rightContent} onClose={closeRight} />
       </div>
     </>
+  );
+}
+
+// 🔧 FIX: Wrap in Suspense per useSearchParams (Next.js 14 requirement)
+export default function QuickAddClientPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center' }}>Caricamento...</div>}>
+      <QuickAddClientContent />
+    </Suspense>
   );
 }
