@@ -461,91 +461,93 @@ export default function DrawerImpostazioni({ onClose }: DrawerImpostazioniProps)
           )}
         </div>
 
-        {/* 🧪 SEZIONE TEST COMPANION - BETA */}
-        <div style={{ marginBottom: 16 }}>
-          <button 
-            onClick={() => setTestPanelExpanded(!testPanelExpanded)} 
-            style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 16px',
-              background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
-              border: 'none',
-              borderRadius: testPanelExpanded ? '12px 12px 0 0' : 12,
-              cursor: 'pointer',
-              color: 'white',
-              transition: 'all 0.2s',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>🧪 Test Companion</span>
-              {!testPanelExpanded && (
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 400 }}>
-                  {testPanelEnabled ? '✓ Attivo' : '○ Disattivato'}
-                </span>
-              )}
-            </div>
-            <span style={{ fontSize: 12 }}>{testPanelExpanded ? '▲' : '▼'}</span>
-          </button>
-          
-          {testPanelExpanded && (
-            <div style={{
-              padding: 16,
-              border: 'none',
-              borderTop: 'none',
-              borderRadius: '0 0 12px 12px',
-              background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
-            }}>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 16 }}>
-                Pannello per inviare segnalazioni durante il testing Beta.
-              </p>
-              
-              <div 
-                onClick={() => handleTestPanelToggle(!testPanelEnabled)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px',
-                  background: testPanelEnabled ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.1)',
-                  borderRadius: 12,
-                  border: testPanelEnabled ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.2)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 24 }}>🧪</span>
-                  <div>
-                    <div style={{ fontWeight: 600, color: 'white' }}>Mostra pannello</div>
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                      {testPanelEnabled ? 'Bottone 🧪 visibile in basso a dx' : 'Pannello nascosto'}
+        {/* 🧪 SEZIONE TEST COMPANION - SOLO ADMIN */}
+        {isAdmin && (
+          <div style={{ marginBottom: 16 }}>
+            <button 
+              onClick={() => setTestPanelExpanded(!testPanelExpanded)} 
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 16px',
+                background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
+                border: 'none',
+                borderRadius: testPanelExpanded ? '12px 12px 0 0' : 12,
+                cursor: 'pointer',
+                color: 'white',
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>🧪 Test Companion</span>
+                {!testPanelExpanded && (
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 400 }}>
+                    {testPanelEnabled ? '✓ Attivo' : '○ Disattivato'}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: 12 }}>{testPanelExpanded ? '▲' : '▼'}</span>
+            </button>
+            
+            {testPanelExpanded && (
+              <div style={{
+                padding: 16,
+                border: 'none',
+                borderTop: 'none',
+                borderRadius: '0 0 12px 12px',
+                background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)',
+              }}>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 16 }}>
+                  Pannello per inviare segnalazioni durante il testing Beta.
+                </p>
+                
+                <div 
+                  onClick={() => handleTestPanelToggle(!testPanelEnabled)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px',
+                    background: testPanelEnabled ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                    border: testPanelEnabled ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.2)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 24 }}>🧪</span>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'white' }}>Mostra pannello</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                        {testPanelEnabled ? 'Bottone 🧪 visibile in basso a dx' : 'Pannello nascosto'}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div style={{
-                  width: 44, height: 24, borderRadius: 12,
-                  background: testPanelEnabled ? '#6366f1' : '#d1d5db',
-                  position: 'relative', transition: 'background 0.2s',
-                }}>
                   <div style={{
-                    width: 20, height: 20, borderRadius: 10,
-                    background: 'white', position: 'absolute', top: 2,
-                    left: testPanelEnabled ? 22 : 2,
-                    transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  }} />
+                    width: 44, height: 24, borderRadius: 12,
+                    background: testPanelEnabled ? '#6366f1' : '#d1d5db',
+                    position: 'relative', transition: 'background 0.2s',
+                  }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 10,
+                      background: 'white', position: 'absolute', top: 2,
+                      left: testPanelEnabled ? 22 : 2,
+                      transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  <p>💡 Usa le categorie per segnalare:</p>
+                  <p style={{ marginLeft: 8, marginTop: 4 }}>🐛 Bug • 💡 Miglioramento</p>
                 </div>
               </div>
-
-              <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                <p>💡 Usa le categorie per segnalare:</p>
-                <p style={{ marginLeft: 8, marginTop: 4 }}>🐛 Bug • 💡 Miglioramento</p>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* SEZIONE DIALOGO */}
         <div style={{ marginBottom: 16 }}>

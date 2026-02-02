@@ -4,7 +4,6 @@
 "use client";
 import { useState } from "react";
 import ClientSearchBox from "../ClientSearchBox";
-import NewClientModal from "../NewClientModal";
 
 interface DrawerDatiProps {
   onClose: () => void;
@@ -13,7 +12,6 @@ interface DrawerDatiProps {
 export default function DrawerDati({ onClose }: DrawerDatiProps) {
   const [tab, setTab] = useState<'clienti' | 'prodotti' | 'uscite'>('uscite');
   const [showClientSearch, setShowClientSearch] = useState(false);
-  const [showNewClientModal, setShowNewClientModal] = useState(false);
   
   function goToClientDetail(clientId: string) {
     onClose();
@@ -21,8 +19,8 @@ export default function DrawerDati({ onClose }: DrawerDatiProps) {
   }
 
   function goQuickAdd() {
-    // Mostra modal scelta Voice/Form invece di andare diretto al form
-    setShowNewClientModal(true);
+    onClose();
+    window.location.href = '/tools/quick-add-client';
   }
   
   function goClientsList() {
@@ -197,15 +195,6 @@ export default function DrawerDati({ onClose }: DrawerDatiProps) {
           </div>
         )}
       </div>
-
-      {/* Modal Nuovo Cliente */}
-      <NewClientModal 
-        show={showNewClientModal} 
-        onClose={() => {
-          setShowNewClientModal(false);
-          onClose(); // Chiudi anche il drawer quando utente fa una scelta
-        }} 
-      />
     </>
   );
 }
